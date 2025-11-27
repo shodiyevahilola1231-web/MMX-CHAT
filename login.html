@@ -1,112 +1,103 @@
 <!DOCTYPE html>
 <html lang="uz">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MMX-CHAT — Login</title>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>MMX-CHAT Login</title>
+
+    <!-- Firebase -->
+    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-auth.js"></script>
+
     <style>
         body {
             font-family: Arial, sans-serif;
-            background: #f5f5f5;
+            background: #f4f6f9;
             display: flex;
             justify-content: center;
             align-items: center;
             height: 100vh;
         }
-        .box {
+
+        .card {
+            width: 350px;
             background: white;
             padding: 25px;
-            border-radius: 10px;
-            width: 300px;
-            box-shadow: 0 0 10px #ccc;
+            border-radius: 8px;
+            box-shadow: 0 0 15px rgba(0,0,0,0.1);
         }
+
         input {
             width: 100%;
-            padding: 10px;
-            margin-top: 8px;
-            border: 1px solid #ddd;
-            border-radius: 5px;
+            padding: 12px;
+            margin-top: 10px;
+            border: 1px solid silver;
+            border-radius: 6px;
         }
+
         button {
             width: 100%;
-            padding: 10px;
+            padding: 12px;
             margin-top: 15px;
-            background: #007bff;
             border: none;
+            border-radius: 6px;
+            background: #2f80ed;
             color: white;
-            border-radius: 5px;
             cursor: pointer;
         }
-        .google {
+
+        #googleBtn {
             background: #db4437;
         }
     </style>
 </head>
+
 <body>
 
-<div class="box">
-    <h2>MMX-CHAT</h2>
+    <div class="card">
+        <h2>Kirish</h2>
 
-    <input id="email" type="email" placeholder="Email kiriting">
-    <input id="parol" type="password" placeholder="Parol kiriting">
+        <input id="email" placeholder="Email" type="email">
+        <input id="password" placeholder="Parol" type="password">
 
-    <button onclick="login()">Kirish</button>
-    <button onclick="register()">Ro‘yxatdan o‘tish</button>
-    <button class="google" onclick="googleLogin()">Google bilan kirish</button>
-</div>
+        <button onclick="loginEmail()">Kirish</button>
+        <button id="googleBtn" onclick="googleLogin()">Google orqali kirish</button>
 
-<script type="module">
-    // 🔹 SHU YERGA Firebase Configingni qo'yasan!!!
-    const firebaseConfig = {
-        apiKey: "YOUR_API_KEY",
-        authDomain: "YOUR_AUTH_DOMAIN",
-        projectId: "YOUR_PROJECT_ID",
-        storageBucket: "YOUR_STORAGE_BUCKET",
-        messagingSenderId: "YOUR_SENDER_ID",
-        appId: "YOUR_APP_ID"
-    };
+        <p style="margin-top:10px;">Hisob yo‘qmi? <a href="register.html">Ro‘yxatdan o‘tish</a></p>
+    </div>
 
-    // Firebase ulash
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-    import { 
-        getAuth, 
-        signInWithEmailAndPassword,
-        createUserWithEmailAndPassword,
-        GoogleAuthProvider,
-        signInWithPopup
-    } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+    <script>
+        // Firebase config ↓↓↓ shu joyga Firebase’dan olgan config’ni qo‘yasiz
+        const firebaseConfig = {
+            apiKey: "SENING API KEY",
+            authDomain: "SENING authDomain",
+            projectId: "SENING projectId",
+            storageBucket: "SENING storageBucket",
+            messagingSenderId: "SENING messagingSenderId",
+            appId: "SENING appId"
+        };
 
-    const app = initializeApp(firebaseConfig);
-    const auth = getAuth(app);
-    const provider = new GoogleAuthProvider();
+        const app = firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
 
-    // Email bilan login
-    function login() {
-        const email = document.getElementById("email").value;
-        const parol = document.getElementById("parol").value;
+        // Email / Parol bilan kirish
+        function loginEmail() {
+            const email = document.getElementById("email").value;
+            const pass = document.getElementById("password").value;
 
-        signInWithEmailAndPassword(auth, email, parol)
-        .then(() => window.location = "chat.html")
-        .catch(err => alert("Xato: " + err.message));
-    }
+            auth.signInWithEmailAndPassword(email, pass)
+                .then(() => location.href = "chat.html")
+                .catch(err => alert(err.message));
+        }
 
-    // Email bilan ro'yxatdan o'tish
-    function register() {
-        const email = document.getElementById("email").value;
-        const parol = document.getElementById("parol").value;
-
-        createUserWithEmailAndPassword(auth, email, parol)
-        .then(() => alert("Ro‘yxatdan o‘tdingiz! Endi kiring."))
-        .catch(err => alert("Xato: " + err.message));
-    }
-
-    // Google bilan kirish
-    function googleLogin() {
-        signInWithPopup(auth, provider)
-        .then(() => window.location = "chat.html")
-        .catch(err => alert("Google xatosi: " + err.message));
-    }
-</script>
+        // Google Login
+        function googleLogin() {
+            const provider = new firebase.auth.GoogleAuthProvider();
+            auth.signInWithPopup(provider)
+                .then(() => location.href = "chat.html")
+                .catch(err => alert(err.message));
+        }
+    </script>
 
 </body>
 </html>
