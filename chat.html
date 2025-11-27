@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+<meta charset="UTF-8" />
+<title>MMX-CHAT</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<style>
+    body { font-family: Arial; background:#f4f6f9; margin:0; padding:20px; }
+    #messages { height:400px; overflow-y:scroll; background:white; padding:10px; border-radius:10px; }
+    #messages p { background:#e7f0ff; padding:8px; border-radius:5px; margin-bottom:6px; }
+    #sendBox { margin-top:10px; display:flex; gap:10px; }
+    input { flex:1; padding:10px; border:1px solid #ccc; border-radius:5px; }
+    button { padding:10px 20px; background:#2f80ed; color:white; border:none; border-radius:5px; cursor:pointer; }
+</style>
+
+<!-- Firebase -->
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js"></script>
+<script>
+const firebaseConfig = {
+  apiKey: "YOUR_API_KEY",
+  authDomain: "YOUR_PROJECT.firebaseapp.com",
+  databaseURL: "https://YOUR_PROJECT.firebaseio.com",
+  projectId: "YOUR_PROJECT_ID",
+  storageBucket: "YOUR_PROJECT.appspot.com",
+  messagingSenderId: "000000000000",
+  appId: "YOUR_APP_ID"
+};
+
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
+</script>
+</head>
+<body>
+
+<h2>MMX-CHAT</h2>
+
+<div id="messages"></div>
+
+<div id="sendBox">
+    <input id="msgInput" placeholder="Xabar yozing..." />
+    <button onclick="sendMsg()">Yuborish</button>
+</div>
+
+<script>
+
+// Xabar yuborish
+function sendMsg() {
+    const txt = document.getElementById("msgInput").value;
+    if (!txt) return;
+
+    db.ref("messages").push({
+        text: txt,
+        time: Date.now()
+    });
+
+    document.getElementById("msgInput").value = "";
+}
+
+// Xabarlarni olish
+db.ref("messages").on("child_added", snap => {
+    const data = snap.val();
+    const box = document.getElementById("messages");
+    const p = document.createElement("p");
+    p.textContent = data.text;
+    box.appendChild(p);
+    box.scrollTop = box.scrollHeight;
+});
+
+</script>
+
+</body>
+</html>
