@@ -1,11 +1,294 @@
 <!DOCTYPE html>
 <html lang="uz">
 <head>
-    <meta charset="UTF-8">
+  <meta charset="utf-8" />
   <title>MMX-CHAT</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    body { font-family: Arial, Helvetica, sans-serif; background:#f4f6f9; margin:0; padding:20px; }
+    .container { max-width:1000px; margin:0 auto; display:flex; gap:20px; }
+    .card { background:white; border-radius:8px; padding:16px; box-shadow:0 2px 8px rgba(0,0,0,0.06); }
+    #left { width:320px; }
+    #right { flex:1; display:flex; flex-direction:column; }
+    h2 { margin-top:0; }
+    input, select, button, textarea { width:100%; padding:8px 10px; margin:8px 0; box-sizing:border-box; border-radius:6px; border:1px solid #ddd; }
+    button.primary { background:#2f80ed; color:white; border:none; cursor:pointer; }
+    button.danger { background:#e74c3c; color:white; border:none; cursor:pointer; }
+    button.google { background:#db4437; color:white; border:none; cursor:pointer; }
+    #messages { flex:1; overflow-y:auto; background:#fafafa; border:1px solid #eee; padding:12px; border-radius:6px; }
+    .msg { margin-bottom:10px; padding:8px; border-radius:6px; }
+    .me { background:#dff7df; align-self:flex-end; }
+    .other { background:#fff; border:1px solid #eee; }
+    .meta { font-size:12px; color:#666; margin-bottom:6px; }
+    .room-list button { display:block; width:100%; text-align:left; margin-bottom:6px; }
+    .hidden { display:none; }
+    .topbar { display:flex; justify-content:space-between; align-items:center; gap:10px; }
+    small.note { color:#666; }
+  </style>
+
+  <!-- Firebase v9 modular -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js";
+    import {
+      getAuth,
+      createUserWithEmailAndPassword,
+      signInWithEmailAndPassword,
+      GoogleAuthProvider,
+      signInWithPopup,
+      signOut,
+      onAuthStateChanged,
+      updateProfile
+    } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-auth.js";
+    import {
+      getDatabase,
+      ref,
+      push,
+      onChildAdded,
+      off,
+      set,
+      child,
+      get,
+      query,
+      orderByChild
+    } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-database.js";
+
+    // ======= PASTE YOUR FIREBASE CONFIG HERE =======
+    const firebaseConfig = {
+      apiKey: "YOUR_API_KEY",
+      authDomain: "YOUR_AUTH_DOMAIN",
+      databaseURL: "YOUR_DATABASE_URL",
+      projectId: "YOUR_PROJECT_ID",
+      storageBucket: "YOUR_STORAGE_BUCKET",
+      messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
+      appId: "YOUR_APP_ID"
+    };
+    // ===============================================
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getDatabase(app);
+
+    // --- DOM ---
+    const loginBox = document.getElementById('loginBox');
+    const chatBox = document.getElementById('chatBox');
+    const emailInput = document.getElementById('email');
+    const passInput = document.getElementById('password');
+    const displayNameInput = document.getElementById('displayName');
+
+    const messagesDiv = document.getElementById('messages');
+    const msgInput = document.getElementById('msg');
+    const roomSelect = document.getElementById('roomSelect');
+    const roomsContainer = document.getElementById('roomsContainer');
+    const currentRoomLabel = document.getElementById('currentRoomLabel');
+    const userLabel = document.getElementById('userLabel');
+
+    // Default rooms (sen qo'shishi mumkin)
+    const defaultRooms = ['general','games','support','fun'];
+    let currentRoom = 'general';
+    let messagesListenerRef = null;
+
+    // Init UI: populate rooms buttons
+    function renderRoomButtons() {
+      roomsContainer.innerHTML = '';
+      defaultRooms.forEach(r => {
+        const btn = document.createElement('button');
+        btn.textContent = r.charAt(0).toUpperCase() + r.slice(1);
+        btn.className = 'card';
+        btn.onclick = () => switchRoom(r);
+        roomsContainer.appendChild(btn);
+      });
+    }
+    renderRoomButtons();
+
+    // Switch room: detach old listener and attach new
+    function switchRoom(room) {
+      if (messagesListenerRef) {
+        off(messagesListenerRef);
+      }
+      currentRoom = room;
+      currentRoomLabel.textContent = `# ${room}`;
+      messagesDiv.innerHTML = '';
+      // attach new listener
+      const messagesRef = ref(db, `rooms/${room}/messages`);
+      // load existing and new messages in chronological order
+      // Using onChildAdded to stream messages
+      messagesListenerRef = messagesRef;
+      onChildAdded(messagesRef, snapshot => {
+        const val = snapshot.val();
+        addMessageToUI(val);
+      });
+    }
+
+    // Add message element to UI
+    function addMessageToUI(msg) {
+      const div = document.createElement('div');
+      div.className = 'msg ' + (msg.uid === (auth.currentUser && auth.currentUser.uid) ? 'me' : 'other');
+      const meta = document.createElement('div');
+      meta.className = 'meta';
+      meta.innerHTML = `<strong>${msg.name||msg.email||'Anon'}</strong> • ${new Date(msg.time).toLocaleString()}`;
+      const text = document.createElement('div');
+      text.textContent = msg.text;
+      div.appendChild(meta);
+      div.appendChild(text);
+      messagesDiv.appendChild(div);
+      messagesDiv.scrollTop = messagesDiv.scrollHeight;
+    }
+
+    // Send message
+    window.sendMessage = function() {
+      const text = msgInput.value.trim();
+      if (!text) return;
+      const messagesRef = ref(db, `rooms/${currentRoom}/messages`);
+      const data = {
+        text: text,
+        time: Date.now(),
+        uid: auth.currentUser.uid,
+        name: auth.currentUser.displayName || null,
+        email: auth.currentUser.email || null
+      };
+      push(messagesRef, data)
+        .then(() => { msgInput.value = ''; })
+        .catch(err => alert('Xato: ' + err.message));
+    };
+
+    // Register
+    window.register = function() {
+      const email = emailInput.value.trim();
+      const pass = passInput.value;
+      const name = displayNameInput.value.trim();
+      if (!email || !pass) return alert('Email va parol kiriting');
+      createUserWithEmailAndPassword(auth, email, pass)
+        .then(userCredential => {
+          // set displayName if provided
+          if (name) {
+            return updateProfile(userCredential.user, { displayName: name });
+          }
+        })
+        .catch(err => alert('Roʻyxatdan oʻtishda xato: ' + err.message));
+    };
+
+    // Login with email
+    window.login = function() {
+      const email = emailInput.value.trim();
+      const pass = passInput.value;
+      if (!email || !pass) return alert('Email va parol kiriting');
+      signInWithEmailAndPassword(auth, email, pass)
+        .catch(err => alert('Kirishda xato: ' + err.message));
+    };
+
+    // Google login
+    window.googleLogin = function() {
+      const provider = new GoogleAuthProvider();
+      signInWithPopup(auth, provider)
+        .catch(err => alert('Google login xato: ' + err.message));
+    };
+
+    // Logout
+    window.logout = function() {
+      signOut(auth).catch(err => console.error(err));
+    };
+
+    // React to auth state
+    onAuthStateChanged(auth, user => {
+      if (user) {
+        // show chat
+        loginBox.classList.add('hidden');
+        chatBox.classList.remove('hidden');
+        userLabel.textContent = user.displayName || user.email;
+        // ensure displayName exists in profile in DB (optional)
+        set(ref(db, `users/${user.uid}`), {
+          name: user.displayName || null,
+          email: user.email,
+          lastSeen: Date.now()
+        }).catch(()=>{});
+        // switch to currentRoom (attach listeners)
+        switchRoom(currentRoom);
+      } else {
+        // show login
+        loginBox.classList.remove('hidden');
+        chatBox.classList.add('hidden');
+        if (messagesListenerRef) off(messagesListenerRef);
+      }
+    });
+
+    // simple helper to create a new room (optional)
+    window.createRoom = function() {
+      const name = prompt('Yangi xona nomi (masalan: announcements):').trim();
+      if (!name) return;
+      if (!defaultRooms.includes(name)) {
+        defaultRooms.push(name);
+        renderRoomButtons();
+      } else alert('Bu xona mavjud.');
+    };
+
+    // On page ready: nothing else required
+    // Default room mount
+    document.addEventListener('DOMContentLoaded', () => {
+      currentRoomLabel.textContent = `# ${currentRoom}`;
+    });
+
+  </script>
 </head>
 <body>
-    <h1>Salom! Bu mening birinchi MMX chat saytim 😊</h1>
-    <p>Tez orada chat qo‘shamiz...</p>
+  <div class="container">
+    <div id="left" class="card">
+      <h2>MMX-CHAT</h2>
+      <div class="topbar">
+        <div><small class="note">Sizning loyiha: <strong>MMX-CHAT</strong></small></div>
+      </div>
+
+      <!-- LOGIN -->
+      <div id="loginBox">
+        <h3>Kirish / Ro'yxatdan o'tish</h3>
+        <input id="displayName" placeholder="Ismingiz (ixtiyoriy)">
+        <input id="email" type="email" placeholder="Email">
+        <input id="password" type="password" placeholder="Parol">
+        <button class="primary" onclick="register()">Ro'yxatdan o'tish (Email)</button>
+        <button class="primary" onclick="login()">Kirish (Email)</button>
+        <button class="google" onclick="googleLogin()">Google bilan kirish</button>
+        <hr>
+        <small class="note">Yangi xona qo'shmoqchi bo'lsangiz:</small>
+        <button onclick="createRoom()">Yangi xona yaratish</button>
+      </div>
+    </div>
+
+    <div id="right">
+      <div id="chatBox" class="card hidden">
+        <div style="display:flex;align-items:center;gap:12px;">
+          <div style="flex:1">
+            <h2 style="margin:0">MMX-CHAT <span id="currentRoomLabel" style="font-size:14px;color:#666;"></span></h2>
+            <small id="userLabel"></small>
+          </div>
+          <div style="width:220px;">
+            <select id="roomSelect" onchange="(function(){ const r=this.value; if(r) { document.querySelectorAll('#roomsContainer button').forEach(b=>{ if(b.textContent.toLowerCase()===r) b.click(); }); } }).call(this)">
+              <option value="">Xonani tanlang (yoki chapdan tanlang)</option>
+            </select>
+          </div>
+          <div style="width:120px;text-align:right">
+            <button class="danger" onclick="logout()">Logout</button>
+          </div>
+        </div>
+
+        <div style="display:flex; gap:12px; margin-top:12px;">
+          <div style="width:220px;">
+            <div class="card">
+              <h4>Xonalar</h4>
+              <div id="roomsContainer" class="room-list"></div>
+            </div>
+          </div>
+
+          <div style="flex:1; display:flex; flex-direction:column;">
+            <div id="messages" aria-live="polite"></div>
+
+            <div style="display:flex; gap:8px; margin-top:8px;">
+              <input id="msg" placeholder="Xabar yozing..." />
+              <button class="primary" onclick="sendMessage()">Yuborish</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
 </body>
 </html>
