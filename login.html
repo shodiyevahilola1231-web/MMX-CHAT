@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MMX-CHAT — Login</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #f5f5f5;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+        .box {
+            background: white;
+            padding: 25px;
+            border-radius: 10px;
+            width: 300px;
+            box-shadow: 0 0 10px #ccc;
+        }
+        input {
+            width: 100%;
+            padding: 10px;
+            margin-top: 8px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        button {
+            width: 100%;
+            padding: 10px;
+            margin-top: 15px;
+            background: #007bff;
+            border: none;
+            color: white;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        .google {
+            background: #db4437;
+        }
+    </style>
+</head>
+<body>
+
+<div class="box">
+    <h2>MMX-CHAT</h2>
+
+    <input id="email" type="email" placeholder="Email kiriting">
+    <input id="parol" type="password" placeholder="Parol kiriting">
+
+    <button onclick="login()">Kirish</button>
+    <button onclick="register()">Ro‘yxatdan o‘tish</button>
+    <button class="google" onclick="googleLogin()">Google bilan kirish</button>
+</div>
+
+<script type="module">
+    // 🔹 SHU YERGA Firebase Configingni qo'yasan!!!
+    const firebaseConfig = {
+        apiKey: "YOUR_API_KEY",
+        authDomain: "YOUR_AUTH_DOMAIN",
+        projectId: "YOUR_PROJECT_ID",
+        storageBucket: "YOUR_STORAGE_BUCKET",
+        messagingSenderId: "YOUR_SENDER_ID",
+        appId: "YOUR_APP_ID"
+    };
+
+    // Firebase ulash
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+    import { 
+        getAuth, 
+        signInWithEmailAndPassword,
+        createUserWithEmailAndPassword,
+        GoogleAuthProvider,
+        signInWithPopup
+    } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const provider = new GoogleAuthProvider();
+
+    // Email bilan login
+    function login() {
+        const email = document.getElementById("email").value;
+        const parol = document.getElementById("parol").value;
+
+        signInWithEmailAndPassword(auth, email, parol)
+        .then(() => window.location = "chat.html")
+        .catch(err => alert("Xato: " + err.message));
+    }
+
+    // Email bilan ro'yxatdan o'tish
+    function register() {
+        const email = document.getElementById("email").value;
+        const parol = document.getElementById("parol").value;
+
+        createUserWithEmailAndPassword(auth, email, parol)
+        .then(() => alert("Ro‘yxatdan o‘tdingiz! Endi kiring."))
+        .catch(err => alert("Xato: " + err.message));
+    }
+
+    // Google bilan kirish
+    function googleLogin() {
+        signInWithPopup(auth, provider)
+        .then(() => window.location = "chat.html")
+        .catch(err => alert("Google xatosi: " + err.message));
+    }
+</script>
+
+</body>
+</html>
