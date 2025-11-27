@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+<meta charset="UTF-8" />
+<title>MMX-CHAT – Ro‘yxatdan o‘tish</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<style>
+    body {
+        font-family: Arial, Helvetica, sans-serif;
+        background: #f4f6f9;
+        margin: 0;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 100vh;
+    }
+    .card {
+        width: 350px;
+        background: white;
+        padding: 25px;
+        border-radius: 10px;
+        box-shadow: 0 0 15px rgba(0,0,0,0.1);
+        text-align: center;
+    }
+    input {
+        width: 100%;
+        padding: 12px;
+        margin: 10px 0;
+        border-radius: 5px;
+        border: 1px solid #ddd;
+    }
+    button {
+        width: 100%;
+        padding: 12px;
+        background: #2f80ed;
+        border: none;
+        color: white;
+        border-radius: 5px;
+        font-size: 16px;
+        cursor: pointer;
+    }
+    a { color: #2f80ed; }
+</style>
+</head>
+
+<body>
+<div class="card">
+    <h2>Ro‘yxatdan o‘tish</h2>
+
+    <input type="email" id="email" placeholder="Email">
+    <input type="password" id="password" placeholder="Parol">
+    
+    <button onclick="register()">Ro‘yxatdan o‘tish</button>
+
+    <p>Allaqachon akkounting bor?  
+       <a href="index.html">Kirish</a>
+    </p>
+</div>
+
+<script src="firebase.js"></script>
+
+<script>
+function register() {
+    const email = document.getElementById("email").value;
+    const pass = document.getElementById("password").value;
+
+    firebase.auth().createUserWithEmailAndPassword(email, pass)
+        .then(() => {
+            alert("Ro‘yxatdan o‘tildi!");
+            window.location = "chat.html";
+        })
+        .catch(err => alert(err.message));
+}
+</script>
+
+</body>
+</html>
